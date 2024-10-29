@@ -8,7 +8,7 @@
 ### 2
 When we read values from the brake sensor (C1) and the apps (C3) we do not use the most recent reading and use instead a different approach. Explain the approach and why you think it is used.
 
-**Answer:** *Insert answer*
+**Answer:** *Pelo que entendi, em vez de usar os valores lidos diretamente, o código implementado, para ambos C1 e C3, guarda esse valor e coloca-o em um vetor, que contem mais outras N amostras, e em seguida faz a média desse vetor. Essa média será então o valor de saída, o qual eventualmente vai ser usado noutras funções. Pelo que entendi, este sistema é uma média móvel, ou seja, a cada amostra lida, faz a média do valor recebido e de N valores anteriores. Este sistema permite suavizar possíveis oscilações no sistema. Por exemplo, caso um valor lido esteja distorcido de alguma forma, o valor de saída do sistema naquele instante vai atenuar esse valor distorcido.*
 
 
 ### 3
@@ -24,57 +24,55 @@ Check out the R2D(Ready To Drive) code on the C3 state machine. In the condition
         }
 ```
 
-**Answer:** *Insert answer*
+**Answer:** *Quando o sensor do travão é pressionado, na caixa C1, o valor do sensor vai ser medido e mandado para a CAN BUS. Após recebida essa informação, na caixa C3, vai ser confirmado se o valor de pressão do travão é maior do que 165, e se isso for positivo, a variável R2DTimer vai dar "reset", o seu valor vai ser igual a 0, logo sendo 0<R2D_TIMEOUT, o carro vai entrar no modo R2D. Esta implementação além de permitir ver se o pedal do travão foi pressionado, vai permitir reduzir possíveis erros de "delay".*
+
+
 ### 4
 What is the ID of the can message sent to the bamocar to request torque?
-**Answer:** *Insert answer*
+**Answer:** *0x201 - Source Device: Teensy C3 / AS CU - Intended Destination: Bamocar - Comments: Torque Request to Bamocar*
+
 ### 5 
 The code below is not amazing, tell us some things you would change to improve it, you can write them down in text or correct the code:
 ```c++
-// this is a class for my car
 class mycar {
 private:
-    int sensor_reading1; // hydraulic pressure sensor
-    int sensor_reading2; // temperature sensor
-    int sensor_reading3; // humidity sensor
-    int sensor_reading4; // light sensor
-    int sensor_reading5; // sound sensor
-    int sensor_reading6; // distance sensor
-    int sensor_reading7; // accelerometer sensor
-    int sensor_reading8; // gyroscope sensor
-
-    int sensor_reading9; // old sensor, not used anymore
+    int N=8;
+    int sensores[N];
+    //em vez de usar várias variáveis, é preferivel usar apenas um vetor, cuja dimensão será o número de sensores usados N
+    //não contabilizei o sensor 9, já que não é mais usado, logo N=8
 
 public:
-    mycar() : sensor_reading1(0), sensor_reading2(0), sensor_reading3(0), sensor_reading4(0),
-            sensor_reading5(0), sensor_reading6(0), sensor_reading7(0), sensor_reading8(0) {}
+    mycar(){
+        for(int i=0; i<N; i++){
+            sensores[i]=0;
+        }
+    }
+    //em vez de inicializar cada um dos leitores por extenso, é mais compacto utilizar um ciclo for
+    //este percorre o vetor sensores, inicializando cada um dos sensores
 
-    // Method will update readings by analog reading and print them 
     void updateprint() {
-        sensor_reading1 = analogRead(0); // pin 0 is connected to the hydraulic pressure sensor
-        sensor_reading2 = analogRead(1); // pin 1 is connected to the temperature sensor
-        sensor_reading3 = analogRead(2); // pin 2 is connected to the humidity sensor
-        sensor_reading4 = analogRead(3); // pin 3 is connected to the light sensor
-        sensor_reading5 = analogRead(4); // pin 4 is connected to the sound sensor
-        sensor_reading6 = analogRead(5); // pin 5 is connected to the distance sensor
-        sensor_reading7 = analogRead(6); // pin 6 is connected to the accelerometer sensor
-        sensor_reading8 = analogRead(7); // pin 7 is connected to the gyroscope sensor
-        func(sensor_reading1, sensor_reading2, sensor_reading3, sensor_reading4, 
-              sensor_reading5, sensor_reading6, sensor_reading7, sensor_reading8);// print the readings
+        for(int i=0; i<N; i++){
+            sensores[i]=analogRead(i);
+        }
+    //em vez de atualizar os leitores um a um, por extenso, fica mais compacto utilizar um ciclo for
+    //este percorre o vetor sensores, e atualiza os seus valores conforme a função "analogRead()"
+        func(sensores,N);
+    //para dar print aos valores é preferível apenas passar como argumentos o vetor com os sensores e a sua dimensão N
+    //a função func é criada á parte, o que ajuda, por exemplo, caso seja preciso usá-la de novo, com o mesmo objetivo, e então não é preciso reescrever o código da mesma
     }
 
-    // function to print the readings of the sensors
-    void func(int sensor_reading1, int sensor_reading2, int sensor_reading3, int sensor_reading4, 
-              int sensor_reading5, int sensor_reading6, int sensor_reading7, int sensor_reading8) {
-        Serial.print("Sensor Reading 1: "); Serial.println(sensor_reading1);
-        Serial.print("Sensor Reading 2: "); Serial.println(sensor_reading2);
-        Serial.print("Sensor Reading 3: "); Serial.println(sensor_reading3);
-        Serial.print("Sensor Reading 4: "); Serial.println(sensor_reading4);
-        Serial.print("Sensor Reading 5: "); Serial.println(sensor_reading5);
-        Serial.print("Sensor Reading 6: "); Serial.println(sensor_reading6);
-        Serial.print("Sensor Reading 7: "); Serial.println(sensor_reading7);
-        Serial.print("Sensor Reading 8: "); Serial.println(sensor_reading8);
-        //all readings were serial printed
+    void func(int vec[], int M) {
+        for(int i=0; i<M; i++){
+            Serial.print("Sensor Reading ");
+            Serial.print(i);
+            Serial.print(": ");
+            Serial.println(sensores[i]);
+        }
+    //em vez de dár print de cada um dos sensores por extenso, podemos usar um ciclo for
+    //a função "Serial.print()", pelo que entendi, é uma forma de dár print em código c++, quando se utiliza arduinos
+    //ainda daria para escrever tudo na mesma linha, algo do tipo: "Serial.print("Sensor Reading "); Serial.print(i); Serial.print(": "); Serial.println(sensores[i]);"
+    //mas apesar de ficar ainda mais compacto, acho que fica um pouco mais confuso, por isso prefiro como ficou
+    //a função "Serial.println()", escreve o conteúdo e passa para a próxima linha
     }
 };
 ```
